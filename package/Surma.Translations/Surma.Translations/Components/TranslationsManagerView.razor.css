@@ -1,0 +1,33 @@
+﻿.TranslationsManagerView {
+    height: 100%;    
+    max-height: calc(100dvh - 40px);
+}
+
+.Toolbar {
+    height: 250px;
+}
+
+.TranslationValueColumn {
+    display: flex;
+    gap : 8px;
+    
+    .TranslationValue {
+        flex-grow: 1;
+        
+        fluent-text-field {
+            width: 100%;
+        }
+    }
+}  
+
+.Data {
+    overflow: scroll;
+    height: calc(100% - 50px);
+    
+    fluent-data-grid-row.header {
+        width: max-content;
+        background: #FFF;
+        inset: 0px;
+        position: sticky;
+    }
+}

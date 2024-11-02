@@ -1,6 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
+# 
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TranslationsApp.Blazor", "TranslationsApp.Blazor\TranslationsApp.Blazor.csproj", "{DB2A0D58-ABB7-4132-A0E4-FDAFAED451D2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Surma.Translations", "..\..\package\Surma.Translations\Surma.Translations\Surma.Translations.csproj", "{53F85A03-03F3-440C-B198-D8C9FC4803F9}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -12,5 +15,13 @@ Global
 		{DB2A0D58-ABB7-4132-A0E4-FDAFAED451D2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DB2A0D58-ABB7-4132-A0E4-FDAFAED451D2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DB2A0D58-ABB7-4132-A0E4-FDAFAED451D2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{688BC049-C33D-455A-B42D-02E2EC55EB21}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{688BC049-C33D-455A-B42D-02E2EC55EB21}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{688BC049-C33D-455A-B42D-02E2EC55EB21}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{688BC049-C33D-455A-B42D-02E2EC55EB21}.Release|Any CPU.Build.0 = Release|Any CPU
+		{53F85A03-03F3-440C-B198-D8C9FC4803F9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{53F85A03-03F3-440C-B198-D8C9FC4803F9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{53F85A03-03F3-440C-B198-D8C9FC4803F9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{53F85A03-03F3-440C-B198-D8C9FC4803F9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

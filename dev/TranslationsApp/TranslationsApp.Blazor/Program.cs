@@ -1,4 +1,5 @@
 using Microsoft.FluentUI.AspNetCore.Components;
+using Microsoft.JSInterop;
 using TranslationsApp.Blazor.Components;
 
 var builder = WebApplication.CreateBuilder(args);

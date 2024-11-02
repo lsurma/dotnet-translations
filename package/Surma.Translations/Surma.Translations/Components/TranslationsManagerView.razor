@@ -1,0 +1,86 @@
+﻿@using System.Text.Json
+<div class="TranslationsManagerView">
+    <div class="Toolbar">
+        <FluentButton aria-label="Edit item" IconEnd="@(new Icons.Regular.Size16.Edit())" OnClick="@(() => IdColumnVisible = !IdColumnVisible)">
+            Toggle ID
+        </FluentButton>
+        
+        <FluentAutocomplete TOption="string"
+            AutoComplete="off"
+            Autofocus="false"
+            KeepOpen="true"
+            Placeholder="Select countries"
+            OnOptionsSearch="@((args) => args.Items = AvailableCultureNames)"
+            MaximumSelectedOptions="15"
+            OptionText="@(item => item)"
+            MaxAutoHeight="50px"
+            IconDismiss="null"
+            @bind-SelectedOptions="@SelectedCultureNames">
+            <SelectedOptionTemplate>
+                <FluentBadge Appearance="@Appearance.Neutral"
+                             OnDismissClick="@(e => { Console.WriteLine("pre"); })">
+                    
+                    <div style="">
+                    @context
+                    </div>                    
+                </FluentBadge>
+            </SelectedOptionTemplate>
+        </FluentAutocomplete>
+    </div>
+
+    <div class="Data">
+        <FluentDataGrid ItemSize="45" Virtualize="true" Items="@QueryableTranslations" ShowHover="true" TGridItem="TranslationItem">
+            <SelectColumn TGridItem="TranslationItem" SelectMode="DataGridSelectMode.Multiple" SelectFromEntireRow="false" @bind-SelectedItems="@SelectedTranslations" />
+
+            @if (IdColumnVisible)
+            {
+                <PropertyColumn Width="100px" Property="@(p => p.Id)" Title="ID" />
+            }
+
+            <PropertyColumn Sortable="true" Width="150px" Property="@(p => p.ResourceName)" />
+            <PropertyColumn Sortable="true" Width="150px" Property="@(p => p.Name)">
+                <ColumnOptions>
+                    <div class="search-box">
+                        F
+                    </div>
+                </ColumnOptions>
+            </PropertyColumn>
+
+
+            @foreach (var cultureName in SelectedCultureNames)
+            {
+                <TemplateColumn Width="400px" Title="@cultureName" TGridItem="TranslationItem">
+                    <ColumnOptions>
+                        <div class="search-box">
+                            F
+                        </div>
+                    </ColumnOptions>
+
+                    <ChildContent>
+                        <div class="TranslationValueColumn">
+                            <div class="TranslationValue">
+                                <FluentTextField 
+                                    ValueChanged="@((v) => {})" 
+                                    Value="@context.GetCultureValue(cultureName)" />
+                            </div>
+
+                            <div class="TranslationValueActions">
+                                <FluentButton aria-label="Edit item" IconEnd="@(new Icons.Regular.Size16.Edit())" OnClick="@(() => {})" />
+                                <FluentButton aria-label="Delete item" IconEnd="@(new Icons.Regular.Size16.Delete())" OnClick="@(() => {})" />
+                            </div>
+                        </div>
+                    </ChildContent>
+                </TemplateColumn>
+            }
+        </FluentDataGrid>
+    </div>
+
+    <div>
+        <pre>
+            @(JsonSerializer.Serialize(SelectedTranslations, new JsonSerializerOptions
+ {
+ WriteIndented = true
+ }))
+        </pre>
+    </div>
+</div>

@@ -1,9 +1,13 @@
-﻿using Microsoft.AspNetCore.Components;
+﻿using System.Collections.Immutable;
+using Microsoft.AspNetCore.Components;
+using Microsoft.FluentUI.AspNetCore.Components;
 
 namespace Surma.Translations.Components;
 
 public partial class TranslationsManagerView : ComponentBase
 {
+    public CustomAutocomplete<string>? Autocomplete { get; set; }
+    
     public List<TranslationItem> Translations { get; set; } = new();
 
     public IQueryable<TranslationItem> QueryableTranslations { get; set; } = (new List<TranslationItem>()).AsQueryable();
@@ -12,7 +16,7 @@ public partial class TranslationsManagerView : ComponentBase
 
     public IEnumerable<string> AvailableCultureNames { get; set; } = ["pl-PL", "en-US", "de-DE", "fr-FR", "es-ES", "it-IT"];
 
-    public IEnumerable<string> SelectedCultureNames { get; set; } = [];
+    public IEnumerable<string> SelectedCultureNames { get; set; } = new List<string>();
     
     public bool IdColumnVisible { get; set; } = true;
     

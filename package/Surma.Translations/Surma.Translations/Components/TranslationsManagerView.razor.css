@@ -31,3 +31,10 @@
         position: sticky;
     }
 }
+
+.TranslationsManagerView {
+        
+    fluent-badge::part(control) {
+        
+    }
+}

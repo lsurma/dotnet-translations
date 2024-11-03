@@ -1,1 +1,5 @@
 ﻿
+
+body {
+    --control-corner-radius : 4;
+}

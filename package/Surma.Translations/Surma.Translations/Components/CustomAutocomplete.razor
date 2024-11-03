@@ -1,0 +1,11 @@
+﻿@typeparam TOption where TOption : notnull
+@using Microsoft.AspNetCore.Components.Rendering
+@inherits FluentAutocomplete<TOption>
+
+<div class="CustomFluentAutocomplete">
+    @((RenderTreeBuilder builder) => base.BuildRenderTree(builder))
+</div>
+
+@code {
+    
+}

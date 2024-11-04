@@ -1,10 +1,14 @@
 ﻿.TranslationsManagerView {
     height: 100%;    
-    max-height: calc(100dvh - 40px);
+    max-height: calc(100dvh - 60px);
+    display: flex;
+    flex-flow: column;
 }
 
 .Toolbar {
-    height: 250px;
+    display: flex;
+    flex: 0 1 auto;
+    min-height: 50px;
 }
 
 .TranslationValueColumn {
@@ -22,7 +26,7 @@
 
 .Data {
     overflow: scroll;
-    height: calc(100% - 50px);
+    flex: 1 1 auto;
     
     fluent-data-grid-row.header {
         width: max-content;

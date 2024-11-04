@@ -6,7 +6,7 @@ namespace Surma.Translations.Components;
 
 public partial class TranslationsManagerView : ComponentBase
 {
-    public CustomAutocomplete<string>? Autocomplete { get; set; }
+    public MultiFluentAutocomplete<string>? Autocomplete { get; set; }
     
     public List<TranslationItem> Translations { get; set; } = new();
 
@@ -17,6 +17,8 @@ public partial class TranslationsManagerView : ComponentBase
     public IEnumerable<string> AvailableCultureNames { get; set; } = ["pl-PL", "en-US", "de-DE", "fr-FR", "es-ES", "it-IT"];
 
     public IEnumerable<string> SelectedCultureNames { get; set; } = new List<string>();
+
+    public string? SelectedReferenceCulture { get; set; }
     
     public bool IdColumnVisible { get; set; } = true;
     
@@ -45,6 +47,22 @@ public partial class TranslationsManagerView : ComponentBase
                 Name = $"Name {i}",
             });
         }
+        
         SetItems(items);
+    }
+    
+    private void SelectedCulturesChanged(IEnumerable<string>? newValue)
+    {
+        SelectedCultureNames = newValue ?? new List<string>();
+    }
+    
+    private void SetSelectedReferenceCulture(IEnumerable<string>? newValue)
+    {
+        SelectedReferenceCulture = newValue?.FirstOrDefault();
+    }
+    
+    private bool IsCultureSelectedAsReferenceCulture(string cultureName)
+    {
+        return SelectedReferenceCulture == cultureName;
     }
 }

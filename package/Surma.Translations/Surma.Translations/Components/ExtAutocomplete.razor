@@ -1,0 +1,58 @@
+﻿<MultiFluentAutocomplete 
+    @ref="Autocomplete" 
+    TOption="string"
+    AutoComplete="off"
+    Autofocus="false"
+    KeepOpen="true"
+    Placeholder="Select countries"
+    MaximumSelectedOptions="MaximumSelectedOptions"
+    OptionText="@(item => item)"
+    MaxAutoHeight="50px"
+    IconDismiss="null"
+    SelectedOptions="@SelectedOptions"
+    SelectedOptionsChanged="@SelectedOptionsChanged"
+    OnOptionsSearch="OnOptionsSearch"
+    Width="250px"
+    OptionDisabled="OptionDisabled"
+    Disabled="Disabled"
+>
+    <SelectedOptionTemplate>
+        <FluentBadge Appearance="@Appearance.Neutral"  @onclick:stopPropagation="true"
+            OnDismissClick="@(e => { Autocomplete!.RemoveSelectedItemAsync(context); })">
+            
+            <div style="">
+                @context
+            </div>                    
+        </FluentBadge>
+    </SelectedOptionTemplate>
+</MultiFluentAutocomplete>
+
+@code {
+    [Parameter]
+    public int? MaximumSelectedOptions { get; set; } = Int32.MaxValue;
+    
+    [Parameter]
+    public IEnumerable<string> AvailableOptions { get; set; } = Array.Empty<string>();
+    
+    [Parameter]
+    public IEnumerable<string> SelectedOptions { get; set; } = Array.Empty<string>();
+    
+    [Parameter] 
+    public EventCallback<IEnumerable<string>?> SelectedOptionsChanged { get; set; }
+    
+    [Parameter] 
+    public virtual Func<string,bool>? OptionDisabled { get; set; }
+    
+    [Parameter]
+    public bool Disabled { get; set; }
+    
+    public MultiFluentAutocomplete<string>? Autocomplete { get; set; }
+
+    
+    //     OnOptionsSearch="@((args) => args.Items = AvailableCultureNames.Where(c => c.Contains(args.Text,StringComparison.InvariantCultureIgnoreCase)))"
+
+    private void OnOptionsSearch(OptionsSearchEventArgs<string> args)
+    {
+        args.Items = AvailableOptions.Where(c => c.Contains(args.Text,StringComparison.InvariantCultureIgnoreCase));
+    }
+}

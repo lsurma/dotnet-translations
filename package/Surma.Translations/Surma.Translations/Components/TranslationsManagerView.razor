@@ -1,32 +1,36 @@
 ﻿@using System.Text.Json
 <div class="TranslationsManagerView">
     <div class="Toolbar">
-        <FluentButton Appearance="Appearance.Accent" aria-label="Edit item" IconEnd="@(new Icons.Regular.Size16.Edit())" OnClick="@(() => IdColumnVisible = !IdColumnVisible)">
-            Toggle ID
-        </FluentButton>
-        <CustomAutocomplete @ref="Autocomplete" TOption="string"
-            AutoComplete="off"
-            Autofocus="false"
-            KeepOpen="true"
-            Placeholder="Select countries"
-            OnOptionsSearch="@((args) => args.Items = AvailableCultureNames.Where(c => c.Contains(args.Text, StringComparison.InvariantCultureIgnoreCase)))"
-            MaximumSelectedOptions="15"
-            OptionText="@(item => item)"
-            MaxAutoHeight="50px"
-            IconDismiss="null"
+        
+        
+        <ExtAutocomplete
+            AvailableOptions="AvailableCultureNames"
+            SelectedOptions="@(SelectedReferenceCulture != null ? [SelectedReferenceCulture] : [])"
+            SelectedOptionsChanged="SetSelectedReferenceCulture"
+            MaximumSelectedOptions="1"
+        />
+        
+        <ExtAutocomplete
+            AvailableOptions="AvailableCultureNames"
             SelectedOptions="@SelectedCultureNames"
-            SelectedOptionsChanged="@((items) => { Console.WriteLine("x"); SelectedCultureNames = items; })"
+            SelectedOptionsChanged="SelectedCulturesChanged"
+            OptionDisabled="IsCultureSelectedAsReferenceCulture"
+            Disabled="@(SelectedReferenceCulture == null)"
+        />
+        
+        <FluentButton 
+            Appearance="Appearance.Accent" 
+            IconStart="@(new Icons.Regular.Size16.ArrowClockwise())"
         >
-            <SelectedOptionTemplate>
-                <FluentBadge Appearance="@Appearance.Neutral"  @onclick:stopPropagation="true"
-                    OnDismissClick="@(e => { Autocomplete!.RemoveSelectedItemAsync(context); })">
-                    
-                    <div style="">
-                        @context
-                    </div>                    
-                </FluentBadge>
-            </SelectedOptionTemplate>
-        </CustomAutocomplete>
+            Load Data
+        </FluentButton>
+        
+        <FluentButton 
+            Appearance="Appearance.Accent" 
+            IconStart="@(new Icons.Regular.Size20.SaveSync())"
+        >
+            Save
+        </FluentButton>
     </div>
 
     <div class="Data">
@@ -47,7 +51,32 @@
                 </ColumnOptions>
             </PropertyColumn>
 
+            @if (SelectedReferenceCulture != null)
+            {
+                <TemplateColumn Width="400px" Title="@SelectedReferenceCulture" TGridItem="TranslationItem">
+                    <ColumnOptions>
+                        <div class="search-box">
+                            F
+                        </div>
+                    </ColumnOptions>
 
+                    <ChildContent>
+                        <div class="TranslationValueColumn">
+                            <div class="TranslationValue">
+                                <FluentTextField 
+                                    ValueChanged="@((v) => {})" 
+                                    Value="@context.GetCultureValue(SelectedReferenceCulture)" />
+                            </div>
+
+                            <div class="TranslationValueActions">
+                                <FluentButton aria-label="Edit item" IconEnd="@(new Icons.Regular.Size16.Edit())" OnClick="@(() => {})" />
+                                <FluentButton aria-label="Delete item" IconEnd="@(new Icons.Regular.Size16.Delete())" OnClick="@(() => {})" />
+                            </div>
+                        </div>
+                    </ChildContent>
+                </TemplateColumn>
+            }
+            
             @foreach (var cultureName in SelectedCultureNames)
             {
                 <TemplateColumn Width="400px" Title="@cultureName" TGridItem="TranslationItem">

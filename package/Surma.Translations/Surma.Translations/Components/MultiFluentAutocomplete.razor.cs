@@ -3,7 +3,7 @@ using Microsoft.FluentUI.AspNetCore.Components;
 
 namespace Surma.Translations.Components;
 
-public partial class CustomAutocomplete<TOption> : FluentAutocomplete<TOption> where TOption : notnull
+public partial class MultiFluentAutocomplete<TOption> : FluentAutocomplete<TOption> where TOption : notnull
 {
     public override Task SetParametersAsync(ParameterView parameters)
     {

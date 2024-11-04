@@ -2,9 +2,7 @@
 @using Microsoft.AspNetCore.Components.Rendering
 @inherits FluentAutocomplete<TOption>
 
-<div class="CustomFluentAutocomplete">
-    @((RenderTreeBuilder builder) => base.BuildRenderTree(builder))
-</div>
+@((RenderTreeBuilder builder) => base.BuildRenderTree(builder))
 
 @code {
     

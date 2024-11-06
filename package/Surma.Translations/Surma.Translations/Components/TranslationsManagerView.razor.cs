@@ -22,6 +22,8 @@ public partial class TranslationsManagerView : ComponentBase
     
     public bool IdColumnVisible { get; set; } = true;
     
+    public string? Search { get; set; }
+    
     protected override void OnInitialized()
     {
         SetRandomItems();
@@ -64,5 +66,10 @@ public partial class TranslationsManagerView : ComponentBase
     private bool IsCultureSelectedAsReferenceCulture(string cultureName)
     {
         return SelectedReferenceCulture == cultureName;
+    }
+    
+    private void OnSubmitSettings()
+    {
+        SelectedReferenceCulture = "de-DE";
     }
 }

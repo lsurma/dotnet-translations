@@ -1,31 +1,45 @@
-﻿<MultiFluentAutocomplete 
-    @ref="Autocomplete" 
-    TOption="string"
-    AutoComplete="off"
-    Autofocus="false"
-    KeepOpen="true"
-    Placeholder="Select countries"
-    MaximumSelectedOptions="MaximumSelectedOptions"
-    OptionText="@(item => item)"
-    MaxAutoHeight="50px"
-    IconDismiss="null"
-    SelectedOptions="@SelectedOptions"
-    SelectedOptionsChanged="@SelectedOptionsChanged"
-    OnOptionsSearch="OnOptionsSearch"
-    Width="250px"
-    OptionDisabled="OptionDisabled"
-    Disabled="Disabled"
->
-    <SelectedOptionTemplate>
-        <FluentBadge Appearance="@Appearance.Neutral"  @onclick:stopPropagation="true"
-            OnDismissClick="@(e => { Autocomplete!.RemoveSelectedItemAsync(context); })">
-            
-            <div style="">
-                @context
-            </div>                    
-        </FluentBadge>
-    </SelectedOptionTemplate>
-</MultiFluentAutocomplete>
+﻿<div class="ExtAutocomplete" style="width: @Width">
+    <MultiFluentAutocomplete 
+        @ref="Autocomplete" 
+        TOption="string"
+        AutoComplete="off"
+        Autofocus="false"
+        KeepOpen="true"
+        Placeholder="@Placeholder"
+        MaximumSelectedOptions="MaximumSelectedOptions"
+        OptionText="@(item => item)"
+        MaxAutoHeight="50px"
+        IconDismiss="null"
+        SelectedOptions="@SelectedOptions"
+        SelectedOptionsChanged="@SelectedOptionsChanged"
+        OnOptionsSearch="OnOptionsSearch"
+        Width="@Width"
+        OptionDisabled="OptionDisabled"
+        Disabled="Disabled"
+    >
+        <SelectedOptionTemplate>
+            <FluentBadge Appearance="@Appearance.Neutral"  @onclick:stopPropagation="true"
+                OnDismissClick="@(e => { Autocomplete!.RemoveSelectedItemAsync(context); })">
+                
+                <div style="">
+                    @context
+                </div>                    
+            </FluentBadge>
+        </SelectedOptionTemplate>
+    </MultiFluentAutocomplete>
+    
+    @if(SelectedOptions.Any())
+    {
+        <FluentButton
+            Class="Clear"
+            Appearance="Appearance.Stealth"
+            IconEnd="@(new IconFa())"
+            Title="Clear"
+            OnClick="OnClear" 
+        />
+    }
+    
+</div>
 
 @code {
     [Parameter]
@@ -46,13 +60,23 @@
     [Parameter]
     public bool Disabled { get; set; }
     
+    [Parameter]
+    public string Placeholder { get; set; } = "Select options";
+    
+    [Parameter]
+    public string Width { get; set; } = "250px";
+    
     public MultiFluentAutocomplete<string>? Autocomplete { get; set; }
 
-    
-    //     OnOptionsSearch="@((args) => args.Items = AvailableCultureNames.Where(c => c.Contains(args.Text,StringComparison.InvariantCultureIgnoreCase)))"
 
-    private void OnOptionsSearch(OptionsSearchEventArgs<string> args)
+    private async Task OnOptionsSearch(OptionsSearchEventArgs<string> args)
     {
+        await Task.Delay(100);
         args.Items = AvailableOptions.Where(c => c.Contains(args.Text,StringComparison.InvariantCultureIgnoreCase));
+    }
+    
+    private Task OnClear()
+    {
+        return SelectedOptionsChanged.InvokeAsync([]);
     }
 }

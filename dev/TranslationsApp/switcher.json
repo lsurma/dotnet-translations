@@ -1,0 +1,18 @@
+{
+  "solution": "TranslationsApp.sln",
+  "solutionFolder": null,
+  "mappings": {
+    "Surma.Translations": "../../package/Surma.Translations/Surma.Translations/Surma.Translations.csproj"
+  },
+  "restore": [
+    {
+      "name": "TranslationsApp.Blazor",
+      "packages": [
+        {
+          "packageName": "Surma.Translations"
+        }
+      ]
+    }
+  ],
+  "removeProjects": true
+}

@@ -26,6 +26,11 @@
     }
 }  
 
+.ColumnFilter {
+    display: flex;
+    gap: 8px;
+}
+
 .Data {
     overflow: scroll;
     flex: 1 1 auto;

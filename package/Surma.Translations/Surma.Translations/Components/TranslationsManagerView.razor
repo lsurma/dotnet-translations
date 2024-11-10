@@ -1,83 +1,86 @@
 ﻿@using System.Text.Json
+
 <div class="TranslationsManagerView">
-    <FluentKeyCode Only="[KeyCode.Enter]" OnKeyDown="@(() => { Console.WriteLine("ss");})">
-        <div class="Toolbar">
-                <ExtAutocomplete
-                    AvailableOptions="AvailableCultureNames"
-                    SelectedOptions="@(SelectedReferenceCulture != null ? [SelectedReferenceCulture] : [])"
-                    SelectedOptionsChanged="SetSelectedReferenceCulture"
-                    MaximumSelectedOptions="1"
-                    Placeholder="Ref. lang"
-                    Width="150px"
-                />
-                
-                <ExtAutocomplete
-                    AvailableOptions="AvailableCultureNames"
-                    SelectedOptions="@SelectedCultureNames"
-                    SelectedOptionsChanged="SelectedCulturesChanged"
-                    OptionDisabled="IsCultureSelectedAsReferenceCulture"
-                    Disabled="@(SelectedReferenceCulture == null)"
-                    Placeholder="Other languages"
-                />
-                
-                <FluentTextField
-                    Style="width: 250px;"
-                    Name="Search"
-                    Placeholder="Search (resource, name, values)"
-                    @bind-Value="@Search"
-                />
-                
-                <FluentButton 
-                    Appearance="Appearance.Accent" 
-                    IconStart="@(new Icons.Regular.Size16.ArrowClockwise())"
-                    OnClick="@(() => { Console.WriteLine("Load"); })"
-                >
-                    Load Data
-                </FluentButton>
+    <div class="Toolbar">
+        <ExtAutocomplete
+            AvailableOptions="AvailableCultureNames"
+            SelectedOptions="@(SelectedReferenceCulture != null ? [SelectedReferenceCulture] : [])"
+            SelectedOptionsChanged="SetSelectedReferenceCulture"
+            MaximumSelectedOptions="1"
+            Placeholder="Ref. lang"
+            Width="150px"
+        />
+        
+        <ExtAutocomplete
+            AvailableOptions="AvailableCultureNames"
+            SelectedOptions="@SelectedCultureNames"
+            SelectedOptionsChanged="SelectedCulturesChanged"
+            OptionDisabled="IsCultureSelectedAsReferenceCulture"
+            Disabled="@(SelectedReferenceCulture == null)"
+            Placeholder="Other languages"
+        />
+        
+        <FluentTextField
+            Style="width: 250px;"
+            Name="Search"
+            Placeholder="Search (resource, name, values)"
+            @bind-Value="@Search"
+        />
+        
+        <FluentButton 
+            Appearance="Appearance.Accent" 
+            IconStart="@(new Icons.Regular.Size16.ArrowClockwise())"
+            OnClick="@LoadDataAsync"
+        >
+            Load Data
+        </FluentButton>
+        
             
-            <FluentButton
-                Style="margin-left: 24px;"
-                Appearance="Appearance.Accent" 
-                IconStart="@(new Icons.Regular.Size20.SaveSync())"
-                Type="ButtonType.Submit"
-            >
-                Save
-            </FluentButton>
-        </div>
-    </FluentKeyCode>
+        <FluentButton
+            Style="margin-left: 24px;"
+            Appearance="Appearance.Accent" 
+            IconStart="@(new Icons.Regular.Size20.SaveSync())"
+            Type="ButtonType.Button"
+            OnClick="SaveDataAsync"
+        >
+            Save changes (@DirtyItemsCount)
+        </FluentButton>
+    </div>
 
     <div class="Data">
         <FluentDataGrid ItemSize="45" Virtualize="true" Items="@QueryableTranslations" ShowHover="true" TGridItem="TranslationItem">
             <SelectColumn TGridItem="TranslationItem" SelectMode="DataGridSelectMode.Multiple" SelectFromEntireRow="false" @bind-SelectedItems="@SelectedTranslations" />
 
-            @if (IdColumnVisible)
-            {
-                <PropertyColumn Width="100px" Property="@(p => p.Id)" Title="ID" />
-            }
-
-            <PropertyColumn Sortable="true" Width="150px" Property="@(p => p.ResourceName)" />
-            <PropertyColumn Sortable="true" Width="150px" Property="@(p => p.Name)">
+            <PropertyColumn Filtered="IsColumnFiltered(nameof(TranslationItem.Id))" Width="100px" Property="@(p => p.Id)" Title="ID">
                 <ColumnOptions>
-                    <div class="search-box">
-                        F
-                    </div>
+                    @RenderFilter(nameof(TranslationItem.Id))
+                </ColumnOptions>    
+            </PropertyColumn>
+
+            <PropertyColumn Filtered="IsColumnFiltered(nameof(TranslationItem.ResourceName))" Sortable="true" Width="150px" Property="@(p => p.ResourceName)">
+                <ColumnOptions>
+                    @RenderFilter(nameof(TranslationItem.ResourceName))
+                </ColumnOptions>    
+            </PropertyColumn>
+            
+            <PropertyColumn Filtered="IsColumnFiltered(nameof(TranslationItem.Name))" Sortable="true" Width="150px" Property="@(p => p.Name)">
+                <ColumnOptions>
+                    @RenderFilter(nameof(TranslationItem.Name))
                 </ColumnOptions>
             </PropertyColumn>
 
             @if (SelectedReferenceCulture != null)
             {
-                <TemplateColumn Width="400px" Title="@SelectedReferenceCulture" TGridItem="TranslationItem">
+                <TemplateColumn Filtered="IsColumnFiltered(SelectedReferenceCulture)" Width="400px" Title="@SelectedReferenceCulture" TGridItem="TranslationItem">
                     <ColumnOptions>
-                        <div class="search-box">
-                            F
-                        </div>
+                        @RenderFilter(SelectedReferenceCulture)
                     </ColumnOptions>
 
                     <ChildContent>
                         <div class="TranslationValueColumn">
                             <div class="TranslationValue">
                                 <FluentTextField 
-                                    ValueChanged="@((v) => {})" 
+                                    ValueChanged="@((v) => SetItemValue(context, SelectedReferenceCulture, v))" 
                                     Value="@context.GetCultureValue(SelectedReferenceCulture)" />
                             </div>
 
@@ -92,18 +95,16 @@
             
             @foreach (var cultureName in SelectedCultureNames)
             {
-                <TemplateColumn Width="400px" Title="@cultureName" TGridItem="TranslationItem">
+                <TemplateColumn Filtered="IsColumnFiltered(cultureName)" Width="400px" Title="@cultureName" TGridItem="TranslationItem">
                     <ColumnOptions>
-                        <div class="search-box">
-                            F
-                        </div>
+                        @RenderFilter(cultureName)
                     </ColumnOptions>
 
                     <ChildContent>
                         <div class="TranslationValueColumn">
                             <div class="TranslationValue">
                                 <FluentTextField 
-                                    ValueChanged="@((v) => {})" 
+                                    ValueChanged="@((v) => SetItemValue(context, cultureName, v))" 
                                     Value="@context.GetCultureValue(cultureName)" />
                             </div>
 
@@ -127,3 +128,28 @@
         </pre>
     </div>
 </div>
+
+@code {
+
+    private RenderFragment RenderFilter(string columnName)
+    {
+        return @<text>
+                    <div class="ColumnFilter">
+                        <FluentTextField
+                            Style="width: 100%;"
+                            Placeholder="Filter"
+                            Value="@Filters.GetValueOrDefault(columnName)"
+                            ValueChanged="@((v) => SetColumnFilter(columnName, v))"
+                        />
+                        
+                        <FluentButton
+                            Class="Clear"
+                            Appearance="Appearance.Stealth"
+                            IconEnd="@(new IconFa())"
+                            Title="Clear"
+                            OnClick="@(() => SetColumnFilter(columnName, null))" 
+                        />
+                    </div>
+        </text>;
+    }
+}

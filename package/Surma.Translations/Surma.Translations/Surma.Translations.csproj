@@ -18,6 +18,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <Folder Include="assets\dist\assets\" />
       <Folder Include="assets\public\" />
       <Folder Include="Domain\" />
     </ItemGroup>

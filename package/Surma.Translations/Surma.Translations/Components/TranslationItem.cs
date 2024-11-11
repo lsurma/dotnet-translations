@@ -4,8 +4,6 @@ public class TranslationItem
 {
     public string Id { get; set; } = String.Empty;
     
-    public string CultureName { get; set; } = String.Empty;
-    
     public string ResourceName { get; set; } = String.Empty;
     
     public string Name { get; set; } = String.Empty;

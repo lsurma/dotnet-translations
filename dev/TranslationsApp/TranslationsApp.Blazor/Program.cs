@@ -1,5 +1,6 @@
 using Microsoft.FluentUI.AspNetCore.Components;
 using Microsoft.JSInterop;
+using Surma.Translations.Domain;
 using TranslationsApp.Blazor.Components;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -8,6 +9,12 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 builder.Services.AddFluentUIComponents();
+
+builder.Services.AddOptions<TranslationAppOptions>().Configure<IConfiguration>((options, configuration) => {
+    configuration.GetSection("TranslationApp").Bind(options);
+});
+
+builder.Services.AddScoped<TranslationsManager>();
 
 var app = builder.Build();
 

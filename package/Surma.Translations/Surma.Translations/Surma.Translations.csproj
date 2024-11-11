@@ -12,6 +12,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <PackageReference Include="Azure.Data.Tables" Version="12.9.1" />
         <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="8.*-*"/>
         <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components" Version="4.*-*" />
         <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components.Icons" Version="4.*-*" />
@@ -20,7 +21,6 @@
     <ItemGroup>
       <Folder Include="assets\dist\assets\" />
       <Folder Include="assets\public\" />
-      <Folder Include="Domain\" />
     </ItemGroup>
 
     <ItemGroup>

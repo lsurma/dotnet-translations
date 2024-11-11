@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.FluentUI.AspNetCore.Components;
+using Surma.Translations.Domain;
 
 namespace Surma.Translations.Components;
 
@@ -9,6 +10,9 @@ public partial class TranslationsManagerView : ComponentBase
 {
     [Inject]
     public IDialogService DialogService { get; set; } = default!;
+    
+    [Inject]
+    public TranslationsManager TranslationsManager { get; set; } = default!;
     
     public MultiFluentAutocomplete<string>? Autocomplete { get; set; }
 
@@ -47,7 +51,6 @@ public partial class TranslationsManagerView : ComponentBase
             items.Add(new TranslationItem
             {
                 Id = Guid.NewGuid().ToString(),
-                CultureName = "en",
                 ResourceName = "Resource",
                 Name = $"Name {i}",
             });
@@ -74,6 +77,15 @@ public partial class TranslationsManagerView : ComponentBase
     
     private Task SaveDataAsync()
     {
+        try
+        {
+            return TranslationsManager.SeedRandomAsync();
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+        }
+        
         return Task.CompletedTask;
     }
     
@@ -83,7 +95,15 @@ public partial class TranslationsManagerView : ComponentBase
 
         if (confirmed)
         {
-            SetRandomItems();
+            var translations = await TranslationsManager.GetTranslationsAsync();
+            SetItems(translations.Select(x => new TranslationItem
+            {
+                Id = x.RowKey,
+                ResourceName = x.ResourceName,
+                Name = x.Name,
+                Values = x.GetValues() ?? new Dictionary<string, string?>(),
+                OriginalValues = x.GetValues() ?? new Dictionary<string, string?>(),
+            }).ToList());
         }
     }
     

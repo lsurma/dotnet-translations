@@ -40,6 +40,8 @@ public partial class TranslationsManagerView : ComponentBase
     {
         Translations = items;
         QueryableTranslations = items.AsQueryable();
+        SetDirtyItemsCount();
+
     }
     
     protected void SetRandomItems()
@@ -79,7 +81,8 @@ public partial class TranslationsManagerView : ComponentBase
     {
         try
         {
-            return TranslationsManager.SeedRandomAsync();
+            var dirtyItemsToUpdateOrCreate = Translations.Where(x => x.AreValuesDirty()).Select(x => x.ToTranslationInput());
+            return TranslationsManager.SaveTranslationsAsync(dirtyItemsToUpdateOrCreate);
         }
         catch (Exception e)
         {

@@ -12,6 +12,8 @@ public class TranslationsManager
     
     protected TableClient? TableClient { get; set; }
     
+    protected List<TranslationEntity> Entities { get; } = new();
+    
     public TranslationsManager(
         IOptions<TranslationAppOptions> optionsProvider    
     )
@@ -36,18 +38,45 @@ public class TranslationsManager
         
         await tableClient.AddEntityAsync(translationEntity);
     }
+
+    public async Task<bool> SaveTranslationsAsync(
+        IEnumerable<TranslationInput> translations,
+        CancellationToken cancellationToken = default
+    )
+    {
+        var tableClient = await GetOrCreateTableClientAsync(cancellationToken);
+        var actions = new List<TableTransactionAction>();
+        
+        foreach (var translation in translations)
+        {
+            var existingEntity = Entities.FirstOrDefault(e => e.RowKey == translation.Id);
+
+            if (existingEntity != null)
+            {
+                // Update
+                existingEntity.ResourceName = translation.ResourceName;
+                existingEntity.Name = translation.Name;
+                existingEntity.SetValues(translation.Values);
+                actions.Add(new TableTransactionAction(TableTransactionActionType.UpdateMerge, existingEntity, existingEntity.ETag));
+            }
+        }
+        
+        var res = await tableClient.SubmitTransactionAsync(actions, cancellationToken);
+        
+        return true;
+    }
     
     public async Task<IEnumerable<TranslationEntity>> GetTranslationsAsync(CancellationToken cancellationToken = default)
     {
         var tableClient = await GetOrCreateTableClientAsync(cancellationToken);
-        var translations = new List<TranslationEntity>();
+        Entities.Clear();
         
         await foreach (var translationEntity in tableClient.QueryAsync<TranslationEntity>(cancellationToken: cancellationToken))
         {
-            translations.Add(translationEntity);
+            Entities.Add(translationEntity);
         }
         
-        return translations;
+        return Entities;
     }
     
     protected async Task<TableClient> GetOrCreateTableClientAsync(CancellationToken cancellationToken = default)

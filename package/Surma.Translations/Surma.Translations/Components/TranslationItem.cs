@@ -1,4 +1,6 @@
-﻿namespace Surma.Translations.Components;
+﻿using Surma.Translations.Domain;
+
+namespace Surma.Translations.Components;
 
 public class TranslationItem
 {
@@ -50,5 +52,16 @@ public class TranslationItem
         }
 
         return false;
+    }
+    
+    public TranslationInput ToTranslationInput()
+    {
+        return new TranslationInput
+        {
+            Id = Id,
+            ResourceName = ResourceName,
+            Name = Name,
+            Values = Values
+        };
     }
 }

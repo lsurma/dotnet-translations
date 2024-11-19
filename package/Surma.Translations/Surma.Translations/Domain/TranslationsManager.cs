@@ -1,4 +1,5 @@
-﻿using Azure.Data.Tables;
+﻿using Azure;
+using Azure.Data.Tables;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 
@@ -21,49 +22,50 @@ public class TranslationsManager
         OptionsProvider = optionsProvider;
     }
 
-    public async Task SeedRandomAsync()
-    {
-        var tableClient = await GetOrCreateTableClientAsync();
-        var translationEntity = new TranslationEntity(new Dictionary<string, string?>
-        {
-            ["en-US"] = "Hello",
-            ["de-DE"] = "Hallo"
-        })
-        {
-            PartitionKey = "Translation",
-            RowKey = Guid.NewGuid().ToString(),
-            ResourceName = "ResourceName",
-            Name = "Name",
-        };
-        
-        await tableClient.AddEntityAsync(translationEntity);
-    }
-
-    public async Task<bool> SaveTranslationsAsync(
+    public async Task<SaveTranslationsResult> SaveTranslationsAsync(
         IEnumerable<TranslationInput> translations,
         CancellationToken cancellationToken = default
     )
     {
+        translations = translations.ToList();
         var tableClient = await GetOrCreateTableClientAsync(cancellationToken);
-        var actions = new List<TableTransactionAction>();
-        
-        foreach (var translation in translations)
-        {
-            var existingEntity = Entities.FirstOrDefault(e => e.RowKey == translation.Id);
+        var operationsPerBatchCount = 3;
+        var batches = translations
+            .Select((t, i) => (t, i))
+            .GroupBy(x => x.i / operationsPerBatchCount)
+            .Select(g => g.Select(x => x.t).ToList())
+            .ToList();
 
-            if (existingEntity != null)
+        var responses = new List<Response>();
+        
+        foreach (var operationsInBatch in batches)
+        {
+            var actions = new List<TableTransactionAction>();
+            
+            foreach (var translation in operationsInBatch)
             {
-                // Update
-                existingEntity.ResourceName = translation.ResourceName;
-                existingEntity.Name = translation.Name;
-                existingEntity.SetValues(translation.Values);
-                actions.Add(new TableTransactionAction(TableTransactionActionType.UpdateMerge, existingEntity, existingEntity.ETag));
+                var existingEntity = Entities.FirstOrDefault(e => e.RowKey == translation.Id);
+                var targetEntity = existingEntity ?? new TranslationEntity();
+                
+                targetEntity.PartitionKey = existingEntity?.PartitionKey ?? "LearningStore";
+                targetEntity.RowKey = existingEntity?.RowKey ?? translation.Id;
+                targetEntity.ResourceName = translation.ResourceName;
+                targetEntity.Name = translation.Name;
+                targetEntity.SetValues(translation.Values);
+
+                actions.Add(existingEntity != null 
+                    ? new TableTransactionAction(TableTransactionActionType.UpdateMerge, targetEntity, existingEntity.ETag) 
+                    : new TableTransactionAction(TableTransactionActionType.Add, targetEntity)
+                );
             }
+            
+            var transactionResponses = await tableClient.SubmitTransactionAsync(actions, cancellationToken);
+            responses.AddRange(transactionResponses.Value);
         }
+
+        var errors = responses.Where(r => r.IsError).Select(r => r.ReasonPhrase).ToList();
         
-        var res = await tableClient.SubmitTransactionAsync(actions, cancellationToken);
-        
-        return true;
+        return new SaveTranslationsResult(translations.Count(), translations.Count() - errors.Count, errors);
     }
     
     public async Task<IEnumerable<TranslationEntity>> GetTranslationsAsync(CancellationToken cancellationToken = default)
@@ -95,5 +97,10 @@ public class TranslationsManager
         var tableClient = new TableClient(Options.ConnectionString, Options.TableName);
         await tableClient.CreateIfNotExistsAsync(cancellationToken);
         return tableClient;
+    }
+    
+    public record SaveTranslationsResult(int TotalCount, int SuccessCount, IEnumerable<string> Errors)
+    {
+        public bool IsSuccess => TotalCount == SuccessCount;
     }
 }

@@ -1,6 +1,7 @@
 ﻿using System.Collections.Immutable;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.Extensions.Logging;
 using Microsoft.FluentUI.AspNetCore.Components;
 using Surma.Translations.Domain;
 
@@ -14,8 +15,9 @@ public partial class TranslationsManagerView : ComponentBase
     [Inject]
     public TranslationsManager TranslationsManager { get; set; } = default!;
     
-    public MultiFluentAutocomplete<string>? Autocomplete { get; set; }
-
+    [Inject]
+    public ILogger<TranslationsManagerView> Logger { get; set; } = default!;
+    
     public List<TranslationItem> AvailableTranslationItems { get; set; } = new();
         
     public List<TranslationItem> Translations { get; set; } = new();
@@ -41,25 +43,7 @@ public partial class TranslationsManagerView : ComponentBase
         Translations = items;
         QueryableTranslations = items.AsQueryable();
         SetDirtyItemsCount();
-
-    }
-    
-    protected void SetRandomItems()
-    {
-        var items = new List<TranslationItem>();
-        var random = new Random();
-        for (var i = 0; i < 100; i++)
-        {
-            items.Add(new TranslationItem
-            {
-                Id = Guid.NewGuid().ToString(),
-                ResourceName = "Resource",
-                Name = $"Name {i}",
-            });
-        }
-        
-        AvailableTranslationItems = items;
-        SetItems(items);
+        StateHasChanged();
     }
     
     private void SelectedCulturesChanged(IEnumerable<string>? newValue)
@@ -79,35 +63,69 @@ public partial class TranslationsManagerView : ComponentBase
     
     private Task SaveDataAsync()
     {
-        try
-        {
+        return HandleAsync(async () => {
+            var confirmed = await ConfirmAsync(true);
+            
+            if(!confirmed)
+            {
+                return Task.CompletedTask;
+            }
+            
             var dirtyItemsToUpdateOrCreate = Translations.Where(x => x.AreValuesDirty()).Select(x => x.ToTranslationInput());
-            return TranslationsManager.SaveTranslationsAsync(dirtyItemsToUpdateOrCreate);
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-        }
-        
-        return Task.CompletedTask;
+            var saveResult = await TranslationsManager.SaveTranslationsAsync(dirtyItemsToUpdateOrCreate);
+            await LoadAndSetItemsAsync();
+            
+            if(saveResult is { IsSuccess: true, TotalCount: > 0 })
+            {
+                await DialogService.ShowSuccessAsync("Translations saved successfully");
+            }
+            else if( saveResult is { IsSuccess: true, TotalCount: 0 })
+            {
+                await DialogService.ShowWarningAsync("There was no changes to save");
+            }
+            else if(saveResult is { IsSuccess: false })
+            {
+                var errors = String.Join(", ", saveResult.Errors);
+                
+                if(saveResult.SuccessCount > 0)
+                {
+                    await DialogService.ShowWarningAsync(errors, $"Some translations failed to save.");
+                }
+                else
+                {
+                    await DialogService.ShowErrorAsync(errors, "Translations save failed");
+                }
+            }
+            
+            return Task.CompletedTask;
+        });
     }
     
-    private async Task LoadDataAsync()
+    private Task LoadDataAsync()
     {
-        var confirmed = await ConfirmAsync();
+        return HandleAsync(async () => {
+            var confirmed = await ConfirmAsync(false);
 
-        if (confirmed)
-        {
-            var translations = await TranslationsManager.GetTranslationsAsync();
-            SetItems(translations.Select(x => new TranslationItem
+            if (!confirmed)
             {
-                Id = x.RowKey,
-                ResourceName = x.ResourceName,
-                Name = x.Name,
-                Values = x.GetValues() ?? new Dictionary<string, string?>(),
-                OriginalValues = x.GetValues() ?? new Dictionary<string, string?>(),
-            }).ToList());
-        }
+                return Task.CompletedTask;
+            }
+
+            return LoadAndSetItemsAsync();
+        });
+    }
+
+    private async Task LoadAndSetItemsAsync()
+    {
+        var translations = await TranslationsManager.GetTranslationsAsync();
+        SetItems(translations.Select(x => new TranslationItem
+        {
+            Id = x.RowKey,
+            ResourceName = x.ResourceName,
+            Name = x.Name,
+            Values = x.GetValues() ?? new Dictionary<string, string?>(),
+            OriginalValues = x.GetValues() ?? new Dictionary<string, string?>(),
+        }).ToList());
     }
     
     private bool IsColumnFiltered(string columnName)
@@ -172,7 +190,7 @@ public partial class TranslationsManagerView : ComponentBase
         SetDirtyItemsCount();
     }
 
-    private async Task<bool> ConfirmAsync()
+    private async Task<bool> ConfirmAsync(bool saveChangesConfirmation)
     {
         SetDirtyItemsCount();
         
@@ -181,10 +199,30 @@ public partial class TranslationsManagerView : ComponentBase
             return true;
         }
         
-        var dialog = await DialogService.ShowConfirmationAsync("There are unsaved changes. Are you sure?");
+        var dialog = !saveChangesConfirmation 
+            ? await DialogService.ShowConfirmationAsync("There are unsaved changes. Are you sure?")
+            : await DialogService.ShowConfirmationAsync($"You are about to save {DirtyItemsCount} changes. Are you sure?");
+        
         var result = await dialog.Result;
         
         return !result.Cancelled;
-        
+    }
+
+    private async Task HandleAsync<T>(Func<Task<T>> handler)
+    {
+        try
+        {
+            await handler();
+        }
+        catch (Exception e)
+        {
+            await HandleExceptionAsync(e);
+        }
+    }
+    
+    private async Task HandleExceptionAsync(Exception e)
+    {
+        Logger.LogError(e, "Exception {Message}", e.Message);
+        await DialogService.ShowErrorAsync(e.ToString(), e.Message);
     }
 }

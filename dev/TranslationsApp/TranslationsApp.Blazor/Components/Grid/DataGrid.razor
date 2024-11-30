@@ -1,0 +1,114 @@
+﻿<h3>FakeDataGrid</h3>
+
+<FluentButton OnClick="@(() => SelectedItemsChangedInternal([]))">No items</FluentButton> <br />
+<FluentButton OnClick="@(() => SelectedItemsChangedInternal(["1"]))">Row 1</FluentButton> <br />
+<FluentButton OnClick="@(() => SelectedItemsChangedInternal(["2"]))">Row 2</FluentButton> <br />
+<FluentButton OnClick="@(() => SelectedItemsChangedInternal(["3"]))">Row 3</FluentButton> <br />
+<FluentButton OnClick="@(() => SelectedItemsChangedInternal(["4", "5"]))">Row 4 and 5 fake multi</FluentButton> <br />
+
+<style>
+    fluent-dialog::part(positioning-region) {
+        width: 340px;
+    right: 0;
+    left: unset;
+    }
+</style>
+
+@code {
+    [Inject]
+    protected IDialogService DialogService { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback<IEnumerable<string>> SelectedItemsChanged { get; set; }
+    
+    [Parameter]
+    public NavPanelContext MenuPanelContext { get; set; } = new();
+    
+    protected IDialogReference? MenuPanel { get; set; }
+    
+    protected IEnumerable<string> SelectedItems { get; set; } = new List<string>();
+
+    protected async Task SelectedItemsChangedInternal(IEnumerable<string> ids)
+    {
+        SelectedItems = ids;
+        await SelectedItemsChanged.InvokeAsync(ids);   
+
+        if(ids.Any())
+        {
+            await OpenMenuAsync();
+        }
+        else
+        {
+            await CloseMenuAsync();
+        }
+    }
+    
+    
+    private async Task CloseMenuAsync()
+    {
+        if(MenuPanel != null)
+        {
+            await MenuPanel.CloseAsync();
+            MenuPanel = null;
+        }
+    }
+
+    protected async Task OpenMenuAsync()
+    {
+        await EnsureBasicMenuActions();
+        
+        if(MenuPanel != null)
+        {
+            return;
+        }
+        
+        MenuPanel = await DialogService.ShowPanelAsync<NavPanel>(MenuPanelContext, new DialogParameters<NavPanelContext>()
+        {
+            Content = MenuPanelContext,
+            Alignment = HorizontalAlignment.Right,
+            Title = $"Menu",
+            PrimaryAction = null,
+            SecondaryAction = null,
+            Modal = false,
+            PreventDismissOnOverlayClick = true,
+            OnDialogClosing = EventCallback.Factory.Create<DialogInstance>(this, OnMenuPanelClosing)
+        });
+    }
+    
+    private Task EnsureBasicMenuActions()
+    {
+        return MenuPanelContext.MutateAsync(ctx => {
+            var deleteAction = ctx.Actions.FirstOrDefault(x => x.Key == "Delete");
+            
+            if(deleteAction == null)
+            {
+                deleteAction = new NavPanelAction()
+                {
+                    Key = "Delete",
+                    Text = "Delete items" + string.Join(", ", SelectedItems),
+                    OnClick = EventCallback.Factory.Create<MouseEventArgs>(this, DeleteItemAsync) 
+                };
+                ctx.Actions.Add(deleteAction);
+            }
+            
+            deleteAction.Text = "Delete items" + string.Join(", ", SelectedItems);
+        });
+    }
+
+    protected async Task DeleteItemAsync(MouseEventArgs args)
+    {
+        // Find menu item by key
+        var menuItem = MenuPanelContext.Actions.First(x => x.Key == "Delete");
+        menuItem.InProgress = true;
+        Console.WriteLine($"DeleteItemAsync " + string.Join(", ", SelectedItems));
+        await Task.Delay(2000);
+        Console.WriteLine($"DeleteItemAsync done");
+        menuItem.InProgress = false;
+    }
+
+    protected async Task OnMenuPanelClosing(DialogInstance instance)
+    {
+        MenuPanel = null;
+        _ = 1;
+    }
+}

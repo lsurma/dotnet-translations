@@ -1,6 +1,9 @@
+using System.Diagnostics.Tracing;
+using Azure.Core.Diagnostics;
 using Microsoft.FluentUI.AspNetCore.Components;
 using Microsoft.JSInterop;
 using Surma.Translations.Domain;
+using TranslationsApp.Blazor;
 using TranslationsApp.Blazor.Components;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -15,8 +18,9 @@ builder.Services.AddOptions<TranslationAppOptions>().Configure<IConfiguration>((
 });
 
 builder.Services.AddScoped<TranslationsManager>();
-
 var app = builder.Build();
+
+AzureLogger.CreateConsoleLogger(app.Logger, EventLevel.Informational);
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())

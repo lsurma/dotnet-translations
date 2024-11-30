@@ -1,6 +1,8 @@
-﻿using Azure;
+﻿using System.Linq.Expressions;
+using Azure;
 using Azure.Data.Tables;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Surma.Translations.Domain;
@@ -8,7 +10,8 @@ namespace Surma.Translations.Domain;
 public class TranslationsManager
 {
     public IOptions<TranslationAppOptions> OptionsProvider { get; }
-    
+    public ILogger<TranslationsManager> Logger { get; }
+
     public TranslationAppOptions Options => OptionsProvider.Value;
     
     protected TableClient? TableClient { get; set; }
@@ -16,10 +19,12 @@ public class TranslationsManager
     protected List<TranslationEntity> Entities { get; } = new();
     
     public TranslationsManager(
-        IOptions<TranslationAppOptions> optionsProvider    
+        IOptions<TranslationAppOptions> optionsProvider,
+        ILogger<TranslationsManager> logger
     )
     {
         OptionsProvider = optionsProvider;
+        Logger = logger;
     }
 
     public async Task<SaveTranslationsResult> SaveTranslationsAsync(
@@ -68,17 +73,55 @@ public class TranslationsManager
         return new SaveTranslationsResult(translations.Count(), translations.Count() - errors.Count, errors);
     }
     
-    public async Task<IEnumerable<TranslationEntity>> GetTranslationsAsync(CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<TranslationEntity>> GetTranslationsAsync(
+        CancellationToken cancellationToken = default)
     {
         var tableClient = await GetOrCreateTableClientAsync(cancellationToken);
         Entities.Clear();
         
-        await foreach (var translationEntity in tableClient.QueryAsync<TranslationEntity>(cancellationToken: cancellationToken))
+        var args = new GetTranslationsArgs();
+        Expression<Func<TranslationEntity, bool>> filterInternal = e => e.PartitionKey == args.PartitionKey;
+        var results = tableClient.QueryAsync<TranslationEntity>(
+            filter: filterInternal, 
+            maxPerPage: args.Limit,
+            cancellationToken: cancellationToken
+        );
+        
+        await foreach (var entity in results)
         {
-            Entities.Add(translationEntity);
+            Entities.Add(entity);
         }
         
         return Entities;
+    }
+    
+    public async Task<IEnumerable<TranslationEntity>> GetTranslationsAsync(
+        IEnumerable<string> ids,
+        CancellationToken cancellationToken = default
+    )
+    {
+        var tableClient = await GetOrCreateTableClientAsync(cancellationToken);
+        var entities = new List<TranslationEntity>();
+        
+        foreach (var id in ids)
+        {
+            var entity = await tableClient.GetEntityAsync<TranslationEntity>("LearningStore", id, null, cancellationToken);
+
+            // Find existing entity index and replace it
+            var existingEntityIndex = Entities.FindIndex(e => e.RowKey == id);
+            if (existingEntityIndex >= 0)
+            {
+                Entities[existingEntityIndex] = entity;
+            }
+            else
+            {
+                Entities.Add(entity);
+            }
+            
+            entities.Add(entity);
+        }
+        
+        return entities;
     }
     
     protected async Task<TableClient> GetOrCreateTableClientAsync(CancellationToken cancellationToken = default)

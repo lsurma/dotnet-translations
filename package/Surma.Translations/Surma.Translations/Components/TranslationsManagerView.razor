@@ -20,33 +20,31 @@
             Placeholder="Other languages"
         />
         
-        <FluentTextField
-            Style="width: 250px;"
-            Name="Search"
-            Placeholder="Search (resource, name, values)"
-            @bind-Value="@Search"
-        />
+        <FluentSearch Style="width: 400px;" ValueChanged="SearchChanged"  Value=@Search Placeholder="Search (resource, name, values)" AutoComplete="off" />
         
         <FluentButton 
             Appearance="Appearance.Accent" 
             IconStart="@(new Icons.Regular.Size16.ArrowClockwise())"
             OnClick="@LoadDataAsync"
+            Loading="LoadingInProgress"
+            Disabled="AnyInProgress"
         >
-            Load Data
+            Load data from remote database
         </FluentButton>
-        
             
         <FluentButton
-            Style="margin-left: 24px;"
             Appearance="Appearance.Accent" 
             IconStart="@(new Icons.Regular.Size20.SaveSync())"
             Type="ButtonType.Button"
             OnClick="SaveDataAsync"
+            Loading="SaveInProgress"
+            Disabled="AnyInProgress"
         >
-            Save changes (@DirtyItemsCount)
+            Save changed records (@DirtyItemsCount) to the database 
         </FluentButton>
     </div>
 
+    
     <div class="Data">
         <FluentDataGrid ItemSize="45" Virtualize="true" Items="@QueryableTranslations" ShowHover="true" TGridItem="TranslationItem">
             <SelectColumn TGridItem="TranslationItem" SelectMode="DataGridSelectMode.Multiple" SelectFromEntireRow="false" @bind-SelectedItems="@SelectedTranslations" />
@@ -118,15 +116,7 @@
             }
         </FluentDataGrid>
     </div>
-
-    <div>
-        <pre>
-            @(JsonSerializer.Serialize(SelectedTranslations, new JsonSerializerOptions
- {
- WriteIndented = true
- }))
-        </pre>
-    </div>
+    
 </div>
 
 @code {

@@ -2,7 +2,9 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.FluentUI.AspNetCore.Components;
+using Microsoft.FluentUI.AspNetCore.Components.Utilities.InternalDebounce;
 using Surma.Translations.Domain;
 
 namespace Surma.Translations.Components;
@@ -17,6 +19,11 @@ public partial class TranslationsManagerView : ComponentBase
     
     [Inject]
     public ILogger<TranslationsManagerView> Logger { get; set; } = default!;
+    
+    [Inject]
+    public IOptions<TranslationAppOptions> OptionsProvider { get; set; } = default!;
+    
+    public TranslationAppOptions Options => OptionsProvider.Value;
     
     public List<TranslationItem> AvailableTranslationItems { get; set; } = new();
         
@@ -34,14 +41,43 @@ public partial class TranslationsManagerView : ComponentBase
     
     public string? Search { get; set; }
     
+    public int MaxItemsToFetch { get; set; } = 100;
+    
     public Dictionary<string, string?> Filters { get; set; } = new();
 
     public int DirtyItemsCount { get; set; } = 0;
     
-    protected void SetItems(List<TranslationItem> items)
+    public bool LoadingInProgress { get; set; } = false;
+
+    public bool SaveInProgress { get; set; } = false;
+    
+    public bool AnyInProgress => LoadingInProgress || SaveInProgress;
+
+    protected DebounceAction SearchDebounceAction { get; set; } = new();
+    
+    protected void SetItems(List<TranslationItem> items, bool replace = true, bool setAvailableItems = false)
     {
-        Translations = items;
-        QueryableTranslations = items.AsQueryable();
+        if(replace)
+        {
+            Translations = items;
+        }
+        else
+        {
+            // Find items from arg and replace them in the list
+            foreach (var item in items)
+            {
+                var index = Translations.FindIndex(x => x.Id == item.Id);
+                
+                if(index >= 0)
+                {
+                    Translations[index] = item;
+                }
+            }
+        }
+        
+        QueryableTranslations = Translations.AsQueryable();
+        AvailableTranslationItems = setAvailableItems ? Translations : AvailableTranslationItems;
+        
         SetDirtyItemsCount();
         StateHasChanged();
     }
@@ -61,19 +97,24 @@ public partial class TranslationsManagerView : ComponentBase
         return SelectedReferenceCulture == cultureName;
     }
     
-    private Task SaveDataAsync()
+    private async Task SaveDataAsync()
     {
-        return HandleAsync(async () => {
+        await HandleAsync(async () => {
             var confirmed = await ConfirmAsync(true);
             
             if(!confirmed)
             {
                 return Task.CompletedTask;
             }
+
+            SaveInProgress = true;
+            StateHasChanged();
             
-            var dirtyItemsToUpdateOrCreate = Translations.Where(x => x.AreValuesDirty()).Select(x => x.ToTranslationInput());
+            await Task.Delay(5000);
+            var dirtyItemsToUpdateOrCreate = Translations.Where(x => x.AreValuesDirty()).Select(x => x.ToTranslationInput()).ToList();
             var saveResult = await TranslationsManager.SaveTranslationsAsync(dirtyItemsToUpdateOrCreate);
-            await LoadAndSetItemsAsync();
+            var dirtyIds = dirtyItemsToUpdateOrCreate.Select(x => x.Id).ToList();
+            await LoadAndSetItemsAsync(dirtyIds);
             
             if(saveResult is { IsSuccess: true, TotalCount: > 0 })
             {
@@ -99,11 +140,12 @@ public partial class TranslationsManagerView : ComponentBase
             
             return Task.CompletedTask;
         });
+        SaveInProgress = false;
     }
     
-    private Task LoadDataAsync()
+    private async Task LoadDataAsync()
     {
-        return HandleAsync(async () => {
+        await HandleAsync(async () => {
             var confirmed = await ConfirmAsync(false);
 
             if (!confirmed)
@@ -111,21 +153,66 @@ public partial class TranslationsManagerView : ComponentBase
                 return Task.CompletedTask;
             }
 
-            return LoadAndSetItemsAsync();
+            LoadingInProgress = true;
+            await LoadAndSetItemsAsync();
+            return Task.CompletedTask;
         });
+        
+        LoadingInProgress = false;
     }
 
-    private async Task LoadAndSetItemsAsync()
+    private async Task LoadAndSetItemsAsync(
+        List<string>? ids = null    
+    )
     {
-        var translations = await TranslationsManager.GetTranslationsAsync();
-        SetItems(translations.Select(x => new TranslationItem
+        // var allocBytes = GC.GetTotalAllocatedBytes(false);
+        // // Generate items with random data
+        // var items = new List<TranslationItem>();
+        // var random = new Random();
+        // var cultures = AvailableCultureNames.ToList();
+        // var randomItemsCount = 2000;
+        //
+        // for (var i = 0; i < randomItemsCount; i++)
+        // {
+        //     var item = new TranslationItem
+        //     {
+        //         Id = Guid.NewGuid().ToString(),
+        //         ResourceName = $"Resource{i}",
+        //         Name = $"Name{i}",
+        //         Values = new Dictionary<string, string?>()
+        //     };
+        //     
+        //     foreach (var culture in cultures)
+        //     {
+        //         // generate between 5 and 50 length string
+        //         var length = random.Next(5, 150);
+        //         item.Values[culture] = new string(Enumerable.Range(1, length).Select(_ => (char)random.Next(65, 90)).ToArray());
+        //     }
+        //     
+        //     items.Add(item);
+        // }
+        //
+        // var afterAllocBytes = GC.GetTotalMemory(false);
+        // var inMegaBytes = (afterAllocBytes - allocBytes) / 1024 / 1024;
+        // Console.WriteLine($"Allocated {inMegaBytes} MB");
+        // SetItems(items);
+
+        var translations = ids == null 
+            ? await TranslationsManager.GetTranslationsAsync() 
+            : await TranslationsManager.GetTranslationsAsync(ids);
+        
+        var asItems = translations.Select(x => new TranslationItem
         {
             Id = x.RowKey,
             ResourceName = x.ResourceName,
             Name = x.Name,
             Values = x.GetValues() ?? new Dictionary<string, string?>(),
             OriginalValues = x.GetValues() ?? new Dictionary<string, string?>(),
-        }).ToList());
+        }).ToList();
+
+        // When ids == null, it means we are loading all items and we replace all existing items
+        // otherwise we update only items with ids from the list
+        SetItems(asItems, ids == null, true);
     }
     
     private bool IsColumnFiltered(string columnName)
@@ -137,18 +224,29 @@ public partial class TranslationsManagerView : ComponentBase
     private void FilterColumns()
     {
         var availableItems = AvailableTranslationItems;
-        var newItems = availableItems.AsEnumerable();
+        IEnumerable<TranslationItem> newItems =  [..availableItems];
         List<string> commonTypes = ([
             nameof(TranslationItem.Id), 
             nameof(TranslationItem.ResourceName), 
             nameof(TranslationItem.Name)
         ]);
+
+        if (!String.IsNullOrWhiteSpace(Search))
+        {
+            newItems = newItems.Where(x => 
+                x.Values.Values.Any(v => v?.Contains(Search!, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                x.Id.Contains(Search!, StringComparison.OrdinalIgnoreCase) ||
+                x.ResourceName.Contains(Search!, StringComparison.OrdinalIgnoreCase) ||
+                x.Name.Contains(Search!, StringComparison.OrdinalIgnoreCase)
+            );
+        }
         
         foreach (var (key, value) in Filters)
         {
             var isValueFilter = !commonTypes.Contains(key);
             var hasValue = !String.IsNullOrWhiteSpace(value);
 
+            
             if (!hasValue)
             {
                 continue;
@@ -176,6 +274,12 @@ public partial class TranslationsManagerView : ComponentBase
     private void SetColumnFilter(string columnName, string? value)
     {
         Filters[columnName] = value;
+        FilterColumns();
+    }
+    
+    private void SetSearchFilter(bool debounce = true)
+    {
+        // Create debounce action
         FilterColumns();
     }
 
@@ -208,7 +312,9 @@ public partial class TranslationsManagerView : ComponentBase
         return !result.Cancelled;
     }
 
-    private async Task HandleAsync<T>(Func<Task<T>> handler)
+    private async Task HandleAsync<T>(
+        Func<Task<T>> handler 
+    )
     {
         try
         {
@@ -224,5 +330,12 @@ public partial class TranslationsManagerView : ComponentBase
     {
         Logger.LogError(e, "Exception {Message}", e.Message);
         await DialogService.ShowErrorAsync(e.ToString(), e.Message);
+    }
+    
+    private Task SearchChanged(string search)
+    {
+        Search = search;
+        SetSearchFilter();
+        return Task.CompletedTask;
     }
 }

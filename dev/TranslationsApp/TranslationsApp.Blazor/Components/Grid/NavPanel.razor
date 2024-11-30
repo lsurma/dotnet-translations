@@ -1,0 +1,60 @@
+﻿@implements IDialogContentComponent<NavPanelContext>
+@implements IDisposable
+
+<FluentDialogHeader>
+    <h3>@Content.RefreshKey</h3>
+</FluentDialogHeader>
+
+<FluentDialogBody>
+    <h3>DataGridMenuPanel</h3>
+    <b>key: @Content.RefreshKey</b>
+    <br />
+
+    <FluentNavMenu Data="NullData">
+        @foreach (var item in Content.Actions)
+        {
+            <FluentNavLink Disabled="@(item.InProgress || OnClickInProgress)" OnClick="@((args) => HandleOnClicked(args, item))">
+                @item.Text @if(item.InProgress) { <text>...</text> }
+            </FluentNavLink>
+        }    
+    </FluentNavMenu>
+</FluentDialogBody>
+
+@code {
+    [Parameter]
+    public NavPanelContext Content { get; set; }
+    
+    protected object NullData { get; set; } = new {};
+    
+    protected bool OnClickInProgress { get; set; }
+    
+    protected override void OnInitialized()
+    {
+        Content.StateHasChangedCallback = StateHasChangedAsync;
+        base.OnInitialized();
+    }
+    
+    protected Task StateHasChangedAsync()
+    {
+        return InvokeAsync(StateHasChanged);
+    }
+    
+    public void Dispose()
+    {
+        Content.StateHasChangedCallback = null;
+    }
+    
+    public async Task HandleOnClicked(MouseEventArgs e, NavPanelAction action)
+    {
+        try
+        {
+            OnClickInProgress = true;
+            await action.OnClick.InvokeAsync(e);
+        }
+        finally
+        {
+            OnClickInProgress = false;
+            await StateHasChangedAsync();
+        }
+    }
+}

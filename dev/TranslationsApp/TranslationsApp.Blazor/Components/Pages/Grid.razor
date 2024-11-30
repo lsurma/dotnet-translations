@@ -1,0 +1,51 @@
+﻿@page "/Grid"
+@using TranslationsApp.Blazor.Components.Grid
+
+<DataGrid
+    MenuPanelContext="@MenuPanelContext"
+    SelectedItemsChanged="SelectedItemsChanged"
+/>
+
+@code {
+    protected NavPanelContext MenuPanelContext { get; set; } = new();
+    
+    protected IEnumerable<string> SelectedItems { get; set; } = new List<string>();
+    
+    protected IList<NavPanelAction> GetMenuActions()
+    {
+        return new List<NavPanelAction>
+        {
+            new NavPanelAction
+            {
+                Text = "Action 1" + string.Join(", ", SelectedItems),
+                OnClick = EventCallback.Factory.Create<MouseEventArgs>(this, BtnAction1)
+            },
+            new NavPanelAction
+            {
+                Text = "Action 2" + string.Join(", ", SelectedItems),
+                OnClick = EventCallback.Factory.Create<MouseEventArgs>(this, BtnAction1)
+            }
+        };
+    }
+    
+    protected async Task BtnAction1()
+    {
+        Console.WriteLine("Action 1");
+        await Task.Delay(2000);
+        Console.WriteLine("Action 1 done");
+    }
+    
+    protected Task RefreshMenuActions()
+    {
+        return MenuPanelContext.MutateAsync(ctx => {
+            ctx.RefreshKey = Guid.NewGuid().ToString();
+            ctx.Actions = GetMenuActions();
+        });
+    }
+    
+    private async Task SelectedItemsChanged(IEnumerable<string> obj)
+    {
+        SelectedItems = obj;
+        await RefreshMenuActions();
+    }
+}

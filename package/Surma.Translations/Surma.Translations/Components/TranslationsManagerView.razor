@@ -31,25 +31,59 @@
         >
             Load data from remote database
         </FluentButton>
-            
+    </div>
+
+    <div class="Toolbar">
         <FluentButton
-            Appearance="Appearance.Accent" 
+            Appearance="Appearance.Neutral"
+            IconStart="@(new Icons.Regular.Size20.Delete())"
+            Type="ButtonType.Button"
+            OnClick="SaveDataAsync"
+            Loading="SaveInProgress"
+            Disabled="@(AnyInProgress || SelectedDeletedReversibleItemsCount > 0 || SelectedSoftDeletableItemsCount <= 0)"
+        >
+            Soft delete (@SelectedSoftDeletableItemsCount) records
+        </FluentButton>
+        
+        <FluentButton
+            Appearance="Appearance.Neutral"
+            IconStart="@(new Icons.Regular.Size20.Delete())"
+            Type="ButtonType.Button"
+            OnClick="SaveDataAsync"
+            Loading="SaveInProgress"
+            Disabled="@(AnyInProgress || SelectedSoftDeletableItemsCount > 0 || SelectedDeletedReversibleItemsCount <= 0)"
+        >
+            Reverse (@SelectedDeletedReversibleItemsCount) deleted records 
+        </FluentButton>
+        
+        <FluentButton
+            Appearance="Appearance.Accent"
             IconStart="@(new Icons.Regular.Size20.SaveSync())"
             Type="ButtonType.Button"
             OnClick="SaveDataAsync"
             Loading="SaveInProgress"
-            Disabled="AnyInProgress"
-        >
-            Save changed records (@DirtyItemsCount) to the database 
+            Disabled="AnyInProgress">
+            Save changed records (@DirtyItemsCount) to the database
         </FluentButton>
     </div>
-
     
     <div class="Data">
         <FluentDataGrid ItemSize="45" Virtualize="true" Items="@QueryableTranslations" ShowHover="true" TGridItem="TranslationItem">
-            <SelectColumn TGridItem="TranslationItem" SelectMode="DataGridSelectMode.Multiple" SelectFromEntireRow="false" @bind-SelectedItems="@SelectedTranslations" />
+            <SelectColumn 
+                TGridItem="TranslationItem" 
+                SelectMode="DataGridSelectMode.Multiple" 
+                SelectFromEntireRow="false" 
+                SelectedItems="@SelectedTranslations"
+                SelectedItemsChanged="SelectedTranslationsChanged"
+            />
 
-            <PropertyColumn Filtered="IsColumnFiltered(nameof(TranslationItem.Id))" Width="100px" Property="@(p => p.Id)" Title="ID">
+            <TemplateColumn Width="60px" Title="" TGridItem="TranslationItem">
+                <ChildContent>
+                    <FluentButton aria-label="Edit item" IconEnd="@(new Icons.Regular.Size16.Edit())" OnClick="@(() => OpenTranslationEditorPanelAsync(context))" /> 
+                </ChildContent>
+            </TemplateColumn>
+            
+            <PropertyColumn Filtered="IsColumnFiltered(nameof(TranslationItem.Id))" Width="200px" Property="@(p => p.Id)" Title="ID">
                 <ColumnOptions>
                     @RenderFilter(nameof(TranslationItem.Id))
                 </ColumnOptions>    
@@ -81,11 +115,6 @@
                                     ValueChanged="@((v) => SetItemValue(context, SelectedReferenceCulture, v))" 
                                     Value="@context.GetCultureValue(SelectedReferenceCulture)" />
                             </div>
-
-                            <div class="TranslationValueActions">
-                                <FluentButton aria-label="Edit item" IconEnd="@(new Icons.Regular.Size16.Edit())" OnClick="@(() => {})" />
-                                <FluentButton aria-label="Delete item" IconEnd="@(new Icons.Regular.Size16.Delete())" OnClick="@(() => {})" />
-                            </div>
                         </div>
                     </ChildContent>
                 </TemplateColumn>
@@ -106,10 +135,10 @@
                                     Value="@context.GetCultureValue(cultureName)" />
                             </div>
 
-                            <div class="TranslationValueActions">
-                                <FluentButton aria-label="Edit item" IconEnd="@(new Icons.Regular.Size16.Edit())" OnClick="@(() => {})" />
-                                <FluentButton aria-label="Delete item" IconEnd="@(new Icons.Regular.Size16.Delete())" OnClick="@(() => {})" />
-                            </div>
+                            @* <div class="TranslationValueActions"> *@
+                            @*     <FluentButton aria-label="Edit item" IconEnd="@(new Icons.Regular.Size16.Edit())" OnClick="@(() => {})" /> *@
+                            @*     <FluentButton aria-label="Delete item" IconEnd="@(new Icons.Regular.Size16.Delete())" OnClick="@(() => {})" /> *@
+                            @* </div> *@
                         </div>
                     </ChildContent>
                 </TemplateColumn>

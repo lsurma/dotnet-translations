@@ -47,6 +47,10 @@ public partial class TranslationsManagerView : ComponentBase
 
     public int DirtyItemsCount { get; set; } = 0;
     
+    public int SelectedSoftDeletableItemsCount { get; set; } = 0;
+
+    public int SelectedDeletedReversibleItemsCount { get; set; } = 0;
+
     public bool LoadingInProgress { get; set; } = false;
 
     public bool SaveInProgress { get; set; } = false;
@@ -165,38 +169,6 @@ public partial class TranslationsManagerView : ComponentBase
         List<string>? ids = null    
     )
     {
-        // var allocBytes = GC.GetTotalAllocatedBytes(false);
-        // // Generate items with random data
-        // var items = new List<TranslationItem>();
-        // var random = new Random();
-        // var cultures = AvailableCultureNames.ToList();
-        // var randomItemsCount = 2000;
-        //
-        // for (var i = 0; i < randomItemsCount; i++)
-        // {
-        //     var item = new TranslationItem
-        //     {
-        //         Id = Guid.NewGuid().ToString(),
-        //         ResourceName = $"Resource{i}",
-        //         Name = $"Name{i}",
-        //         Values = new Dictionary<string, string?>()
-        //     };
-        //     
-        //     foreach (var culture in cultures)
-        //     {
-        //         // generate between 5 and 50 length string
-        //         var length = random.Next(5, 150);
-        //         item.Values[culture] = new string(Enumerable.Range(1, length).Select(_ => (char)random.Next(65, 90)).ToArray());
-        //     }
-        //     
-        //     items.Add(item);
-        // }
-        //
-        // var afterAllocBytes = GC.GetTotalMemory(false);
-        // var inMegaBytes = (afterAllocBytes - allocBytes) / 1024 / 1024;
-        // Console.WriteLine($"Allocated {inMegaBytes} MB");
-        // SetItems(items);
-
         var translations = ids == null 
             ? await TranslationsManager.GetTranslationsAsync() 
             : await TranslationsManager.GetTranslationsAsync(ids);
@@ -336,6 +308,27 @@ public partial class TranslationsManagerView : ComponentBase
     {
         Search = search;
         SetSearchFilter();
+        return Task.CompletedTask;
+    }
+    
+    private async Task OpenTranslationEditorPanelAsync(TranslationItem arg)
+    {
+        var data = new TranslationEditorModel();
+        var editorDialog = await DialogService.ShowPanelAsync<TranslationEditorPanel>(
+            data, 
+            new DialogParameters()
+            {
+                Alignment = HorizontalAlignment.Right,
+                Modal = true,
+                PreventDismissOnOverlayClick = true
+            }
+        );
+        var result = await editorDialog.Result;
+    }
+    
+    private Task SelectedTranslationsChanged(IEnumerable<TranslationItem> arg)
+    {
+        SelectedTranslations = arg;
         return Task.CompletedTask;
     }
 }

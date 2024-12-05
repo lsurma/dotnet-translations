@@ -11,16 +11,13 @@ public class TranslationEntity : EntityBase
         
     }
 
-    public TranslationEntity(Dictionary<string, string?> values)
-    {
-        SetValues(values);
-    }
-    
     public string ResourceName { get; set; } = String.Empty;
     
     public string Name { get; set; } = String.Empty;
     
     public string? Values { get; set; } = String.Empty;
+    
+    public bool IsDeleted { get; set; }
     
     public void SetValues(Dictionary<string, string?> values)
     {

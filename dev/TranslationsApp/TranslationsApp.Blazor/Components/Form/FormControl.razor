@@ -1,0 +1,57 @@
+﻿@using System.Linq.Expressions
+
+<div>
+    <div>@ChildContent(this)</div>
+    <div>
+        @(IsValid ? "Valid": "Invalid")
+        <FluentValidationMessage TValue="object?" Field="Field" />
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public RenderFragment<FormControl> ChildContent { get; set; } = default!;
+    
+    [Parameter]
+    public FieldIdentifier Field { get; set; } = default!;
+    
+    [Parameter]
+    public Expression<Func<object>> For { get; set; } = default!;
+    
+    [CascadingParameter]
+    public EditContext EditContext { get; set; } = default!;
+    
+    protected bool IsValid => !EditContext.GetValidationMessages(Field).Any();
+
+    protected override void OnInitialized()
+    {
+        Field = FieldIdentifier.Create(For);
+        var key = CreateKeyFromExpression(For);
+        base.OnInitialized();
+    }
+    
+    protected string CreateKeyFromExpression(Expression<Func<object>> expression)
+    {
+        var memberExpression = expression.Body as MemberExpression;
+        if (memberExpression == null)
+        {
+            if (expression.Body is UnaryExpression unaryExpression && unaryExpression.Operand is MemberExpression operand)
+            {
+                memberExpression = operand;
+            }
+            else
+            {
+                throw new ArgumentException("The provided expression is not a valid member expression.");
+            }
+        }
+
+        var members = new Stack<string>();
+        while (memberExpression != null)
+        {
+            members.Push(memberExpression.Member.Name);
+            memberExpression = memberExpression.Expression as MemberExpression;
+        }
+
+        return string.Join(".", members);
+    }
+}

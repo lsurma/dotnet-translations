@@ -2,6 +2,7 @@ using System.Diagnostics.Tracing;
 using Azure.Core.Diagnostics;
 using Microsoft.FluentUI.AspNetCore.Components;
 using Microsoft.JSInterop;
+using Surma.Translations;
 using Surma.Translations.Domain;
 using TranslationsApp.Blazor;
 using TranslationsApp.Blazor.Components;
@@ -13,11 +14,8 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 builder.Services.AddFluentUIComponents();
 
-builder.Services.AddOptions<TranslationAppOptions>().Configure<IConfiguration>((options, configuration) => {
-    configuration.GetSection("TranslationApp").Bind(options);
-});
+builder.Services.AddTranslationsApp("TranslationApp");
 
-builder.Services.AddScoped<TranslationsManager>();
 var app = builder.Build();
 
 AzureLogger.CreateConsoleLogger(app.Logger, EventLevel.Informational);

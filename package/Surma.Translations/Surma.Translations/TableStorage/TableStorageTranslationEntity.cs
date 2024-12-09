@@ -2,16 +2,13 @@
 using Azure;
 using Azure.Data.Tables;
 
-namespace Surma.Translations.Domain;
+namespace Surma.Translations.TableStorage;
 
-public class TranslationEntity
+public class TableStorageTranslationEntity : ITableEntity
 {
-    public TranslationEntity()
-    {
-        
-    }
-
-    public string Id { get; set; } = String.Empty;
+    public string PartitionKey { get; set; }
+    
+    public string RowKey { get; set; }
     
     public string ResourceName { get; set; } = String.Empty;
     
@@ -19,9 +16,11 @@ public class TranslationEntity
     
     public string? Values { get; set; } = String.Empty;
     
-    public DateTimeOffset? ModifiedAt { get; set; }
-    
     public bool IsDeleted { get; set; }
+    
+    public DateTimeOffset? Timestamp { get; set; }
+    
+    public ETag ETag { get; set; }
     
     public void SetValues(Dictionary<string, string?> values)
     {

@@ -1,0 +1,59 @@
+﻿@page "/Form"
+@using System.ComponentModel.DataAnnotations
+@using TranslationsApp.Blazor.Components.Form
+<h3>Form</h3>
+
+<AppEditForm @ref="AppEditFormRef" OnValidSubmit="OnSubmitAsync" OnInvalidSubmit="OnSubmitAsync" Model="Model">
+    <FormControl Context="ctx" For="@(() => Model.Name)">
+        <FluentTextField Field="@ctx.Field" @bind-Value="Model.Name" />
+    </FormControl>
+    
+    <FormControl Context="ctx" For="@(() => Model.NestedModel.NestedName)">
+        <FluentTextField Field="@ctx.Field" @bind-Value="Model.NestedModel.NestedName" />
+    </FormControl>
+    
+    <button type="button" @onclick="TriggerInvalidState">Trigger invalid sate</button>
+    
+    <button type="submit">Submit</button>
+</AppEditForm>
+
+
+@code {
+    public FormModel Model { get; set; } = new FormModel();
+    
+    public class FormModel
+    {
+        [MinLength(3, ErrorMessage = "Name is too short")]
+        [MaxLength(5)]
+        public string Name { get; set; } = "33";
+        
+        public NestedModel NestedModel { get; set; } = new NestedModel();
+    }
+    
+    public class NestedModel
+    {
+        [MinLength(3, ErrorMessage = "Name is too short")]
+        [MaxLength(5)]
+        public string NestedName { get; set; } = "33";
+    }
+    
+    private AppEditForm? AppEditFormRef { get; set; }
+
+    private Task OnSubmitAsync(EditContext obj)
+    {
+        _ = 1;
+        
+        return Task.CompletedTask;
+    }
+    
+    private void TriggerInvalidState(MouseEventArgs obj)
+    {
+        Model.Name = "aaaaatest";
+
+        if (AppEditFormRef?.EditContext != null)
+        {
+            var field = FieldIdentifier.Create(() => Model.NestedModel.NestedName);
+            AppEditFormRef.AddErrorMessage(field, "Name is too long api");
+        }
+    }
+}

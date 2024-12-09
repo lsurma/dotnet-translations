@@ -33,6 +33,10 @@ public partial class TranslationsManagerView : ComponentBase
     
     public IEnumerable<TranslationItem> SelectedTranslations { get; set; } = new List<TranslationItem>();
 
+    public IEnumerable<TranslationItem> SelectedSoftDeletableTranslations { get; set; } = new List<TranslationItem>();
+    
+    public IEnumerable<TranslationItem> SelectedDeletedReversibleTranslations { get; set; } = new List<TranslationItem>();
+
     public IEnumerable<string> AvailableCultureNames { get; set; } = ["pl-PL", "en-US", "de-DE", "fr-FR", "es-ES", "it-IT"];
 
     public IEnumerable<string> SelectedCultureNames { get; set; } = new List<string>();
@@ -47,9 +51,8 @@ public partial class TranslationsManagerView : ComponentBase
 
     public int DirtyItemsCount { get; set; } = 0;
     
-    public int SelectedSoftDeletableItemsCount { get; set; } = 0;
-
-    public int SelectedDeletedReversibleItemsCount { get; set; } = 0;
+    public int SelectedSoftDeletableTranslationsCount => SelectedSoftDeletableTranslations.Count();
+    public int SelectedDeletedReversibleTranslationsCount => SelectedDeletedReversibleTranslations.Count();
 
     public bool LoadingInProgress { get; set; } = false;
 
@@ -81,7 +84,7 @@ public partial class TranslationsManagerView : ComponentBase
         
         QueryableTranslations = Translations.AsQueryable();
         AvailableTranslationItems = setAvailableItems ? Translations : AvailableTranslationItems;
-        
+
         SetDirtyItemsCount();
         StateHasChanged();
     }
@@ -110,14 +113,22 @@ public partial class TranslationsManagerView : ComponentBase
             {
                 return Task.CompletedTask;
             }
-
+            
+            var dirtyItemsToUpdateOrCreate = Translations.Where(x => x.AreValuesDirty()).Select(x => x.ToTranslationInput()).ToList();
+            await SaveDataInternalAsync(dirtyItemsToUpdateOrCreate);
+            return Task.CompletedTask;
+        });
+    }
+    
+    private async Task SaveDataInternalAsync(IEnumerable<TranslationInput> items)
+    {
+        await HandleAsync(async () => {
             SaveInProgress = true;
             StateHasChanged();
-            
-            await Task.Delay(5000);
-            var dirtyItemsToUpdateOrCreate = Translations.Where(x => x.AreValuesDirty()).Select(x => x.ToTranslationInput()).ToList();
-            var saveResult = await TranslationsManager.SaveTranslationsAsync(dirtyItemsToUpdateOrCreate);
-            var dirtyIds = dirtyItemsToUpdateOrCreate.Select(x => x.Id).ToList();
+
+            items = items.ToList();
+            var saveResult = await TranslationsManager.SaveTranslationsAsync(items);
+            var dirtyIds = items.Select(x => x.Id).ToList();
             await LoadAndSetItemsAsync(dirtyIds);
             
             if(saveResult is { IsSuccess: true, TotalCount: > 0 })
@@ -175,16 +186,18 @@ public partial class TranslationsManagerView : ComponentBase
         
         var asItems = translations.Select(x => new TranslationItem
         {
-            Id = x.RowKey,
+            Id = x.Id,
             ResourceName = x.ResourceName,
             Name = x.Name,
             Values = x.GetValues() ?? new Dictionary<string, string?>(),
             OriginalValues = x.GetValues() ?? new Dictionary<string, string?>(),
+            IsDirty = false,
+            IsDeleted = x.IsDeleted
         }).ToList();
 
         // When ids == null, it means we are loading all items and we replace all existing items
         // otherwise we update only items with ids from the list
-        SetItems(asItems, ids == null, true);
+        SetItems(asItems, ids == null, ids == null);
     }
     
     private bool IsColumnFiltered(string columnName)
@@ -240,7 +253,7 @@ public partial class TranslationsManagerView : ComponentBase
             }
         }
         
-        SetItems(newItems.ToList());
+        SetItems(newItems.ToList(), true, false);
     }
     
     private void SetColumnFilter(string columnName, string? value)
@@ -262,7 +275,7 @@ public partial class TranslationsManagerView : ComponentBase
     
     private void SetItemValue(TranslationItem item, string cultureName, string? value)
     {
-        item.SetCultureValue(cultureName, value);
+        item.SetTranslationValue(cultureName, value);
         SetDirtyItemsCount();
     }
 
@@ -326,9 +339,92 @@ public partial class TranslationsManagerView : ComponentBase
         var result = await editorDialog.Result;
     }
     
-    private Task SelectedTranslationsChanged(IEnumerable<TranslationItem> arg)
+    private Task SelectedTranslationsChanged(IEnumerable<TranslationItem> translations)
     {
-        SelectedTranslations = arg;
+        var deselectAll = translations.Count() == SelectedTranslations.Count();
+        
+        if(deselectAll)
+        {
+            SelectedTranslations = new List<TranslationItem>();
+            SelectedSoftDeletableTranslations = new List<TranslationItem>();
+            SelectedDeletedReversibleTranslations = new List<TranslationItem>();
+            StateHasChanged();
+            return Task.CompletedTask;
+        }
+        
+        translations = translations.ToList();
+        SelectedTranslations = translations;
+        SelectedSoftDeletableTranslations = translations.Where(x => !x.IsDeleted);
+        
+        SelectedDeletedReversibleTranslations = !SelectedSoftDeletableTranslations.Any() 
+            ? translations.Where(x => x.IsDeleted) 
+            : new List<TranslationItem>();
+        
+        StateHasChanged();
         return Task.CompletedTask;
+    }
+    
+    private async Task SoftDeleteSelectedTranslationsAsync(MouseEventArgs arg)
+    {
+        if(SelectedSoftDeletableTranslationsCount <= 0)
+        {
+            return;
+        }
+        
+        var dialog = await DialogService.ShowConfirmationAsync($"You are about to soft delete {SelectedSoftDeletableTranslationsCount} translations. Are you sure?");
+        var result = await dialog.Result;
+        
+        if(result.Cancelled)
+        {
+            return;
+        }
+        
+        List<TranslationItem> items = [..SelectedSoftDeletableTranslations];
+        foreach (var translation in items)
+        {
+            translation.IsDeleted = true;
+        }
+        
+        var inputs = items.Select(x => x.ToTranslationInput()).ToList();
+        await SaveDataInternalAsync(inputs);
+        
+        SelectedSoftDeletableTranslations = new List<TranslationItem>();
+        SelectedTranslations = new List<TranslationItem>();
+        SelectedDeletedReversibleTranslations = new List<TranslationItem>();
+    }
+    
+    private string GetRowStyle(TranslationItem arg)
+    {
+        return arg.IsDeleted ? "background: #ff00002e;" : "";
+    }
+    
+    private async Task RestoreSoftDeleteSelectedTranslationsAsync(MouseEventArgs arg)
+    {
+        if(SelectedDeletedReversibleTranslationsCount <= 0)
+        {
+            return;
+        }
+        
+        var dialog = await DialogService.ShowConfirmationAsync($"You are about to restore {SelectedDeletedReversibleTranslationsCount} translations. Are you sure?");
+        var result = await dialog.Result;
+        
+        if(result.Cancelled)
+        {
+            return;
+        }
+        
+        List<TranslationItem> items = [..SelectedDeletedReversibleTranslations];
+        foreach (var translation in items)
+        {
+            translation.IsDeleted = false;
+        }
+        
+        var inputs = items.Select(x => x.ToTranslationInput()).ToList();
+        await SaveDataInternalAsync(inputs);
+        
+        SelectedSoftDeletableTranslations = new List<TranslationItem>();
+        SelectedTranslations = new List<TranslationItem>();
+        SelectedDeletedReversibleTranslations = new List<TranslationItem>();
+        return;
     }
 }

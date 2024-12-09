@@ -44,8 +44,11 @@
 }
 
 .TranslationsManagerView {
-        
     fluent-badge::part(control) {
         
+    }
+    
+    .deleted {
+        background: #b32121;
     }
 }

@@ -38,22 +38,22 @@
             Appearance="Appearance.Neutral"
             IconStart="@(new Icons.Regular.Size20.Delete())"
             Type="ButtonType.Button"
-            OnClick="SaveDataAsync"
+            OnClick="SoftDeleteSelectedTranslationsAsync"
             Loading="SaveInProgress"
-            Disabled="@(AnyInProgress || SelectedDeletedReversibleItemsCount > 0 || SelectedSoftDeletableItemsCount <= 0)"
+            Disabled="@(AnyInProgress || SelectedDeletedReversibleTranslationsCount > 0 || SelectedSoftDeletableTranslationsCount <= 0)"
         >
-            Soft delete (@SelectedSoftDeletableItemsCount) records
+            Soft delete (@SelectedSoftDeletableTranslationsCount) records
         </FluentButton>
         
         <FluentButton
             Appearance="Appearance.Neutral"
-            IconStart="@(new Icons.Regular.Size20.Delete())"
+            IconStart="@(new Icons.Regular.Size20.DeleteOff())"
             Type="ButtonType.Button"
-            OnClick="SaveDataAsync"
+            OnClick="RestoreSoftDeleteSelectedTranslationsAsync"
             Loading="SaveInProgress"
-            Disabled="@(AnyInProgress || SelectedSoftDeletableItemsCount > 0 || SelectedDeletedReversibleItemsCount <= 0)"
+            Disabled="@(AnyInProgress || SelectedSoftDeletableTranslationsCount > 0 || SelectedDeletedReversibleTranslationsCount <= 0)"
         >
-            Reverse (@SelectedDeletedReversibleItemsCount) deleted records 
+            Restore (@SelectedDeletedReversibleTranslationsCount) deleted records 
         </FluentButton>
         
         <FluentButton
@@ -68,7 +68,7 @@
     </div>
     
     <div class="Data">
-        <FluentDataGrid ItemSize="45" Virtualize="true" Items="@QueryableTranslations" ShowHover="true" TGridItem="TranslationItem">
+        <FluentDataGrid RowStyle="GetRowStyle" ItemSize="45" Virtualize="true" Items="@QueryableTranslations" ShowHover="true" TGridItem="TranslationItem">
             <SelectColumn 
                 TGridItem="TranslationItem" 
                 SelectMode="DataGridSelectMode.Multiple" 
@@ -113,7 +113,7 @@
                             <div class="TranslationValue">
                                 <FluentTextField 
                                     ValueChanged="@((v) => SetItemValue(context, SelectedReferenceCulture, v))" 
-                                    Value="@context.GetCultureValue(SelectedReferenceCulture)" />
+                                    Value="@context.GetTranslationValue(SelectedReferenceCulture)" />
                             </div>
                         </div>
                     </ChildContent>
@@ -132,7 +132,7 @@
                             <div class="TranslationValue">
                                 <FluentTextField 
                                     ValueChanged="@((v) => SetItemValue(context, cultureName, v))" 
-                                    Value="@context.GetCultureValue(cultureName)" />
+                                    Value="@context.GetTranslationValue(cultureName)" />
                             </div>
 
                             @* <div class="TranslationValueActions"> *@

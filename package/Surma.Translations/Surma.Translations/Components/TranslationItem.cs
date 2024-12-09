@@ -15,19 +15,19 @@ public class TranslationItem
     public Dictionary<string, string?> OriginalValues { get; set; } = new();
     
     public bool IsDirty { get; set; }
+
+    public bool IsDeleted { get; set; }
     
-    public string? GetCultureValue(string cultureName)
+    public string? GetTranslationValue(string cultureName)
     {
         return Values.GetValueOrDefault(cultureName);
     }
     
-    public void SetCultureValue(string cultureName, string? value)
+    public void SetTranslationValue(string cultureName, string? value)
     {
         IsDirty = true;
         Values[cultureName] = value;
     }
-    
-    
     
     public bool AreValuesDirty()
     {
@@ -61,7 +61,8 @@ public class TranslationItem
             Id = Id,
             ResourceName = ResourceName,
             Name = Name,
-            Values = Values
+            Values = Values,
+            IsDeleted = IsDeleted
         };
     }
 }

@@ -1,0 +1,58 @@
+﻿@implements IDisposable
+
+<EditForm @ref="EditForm" EditContext="EditContext" OnValidSubmit="OnInvalidSubmit" OnInvalidSubmit="OnInvalidSubmit" novalidate>
+    <DataAnnotationsValidator />
+    @ChildContent(this)
+</EditForm>
+
+@code {
+    [Parameter]
+    public RenderFragment<AppEditForm> ChildContent { get; set; } = default!;
+
+    [Parameter]
+    public object Model { get; set; }
+
+    [Parameter]
+    public EventCallback<EditContext> OnValidSubmit { get; set; }
+
+    [Parameter]
+    public EventCallback<EditContext> OnInvalidSubmit { get; set; }
+
+    public EditForm? EditForm { get; set; }
+    
+    public EditContext? EditContext { get; set; }
+
+    private ValidationMessageStore? ValidationMessageStore { get; set; }
+
+    protected override void OnInitialized()
+    {
+        EditContext = new EditContext(Model);
+        EditContext.OnValidationRequested += (s, e) => 
+            ValidationMessageStore?.Clear();
+        EditContext.OnFieldChanged += (s, e) => 
+            ValidationMessageStore?.Clear(e.FieldIdentifier);
+        
+        ValidationMessageStore = new ValidationMessageStore(EditContext);
+
+        base.OnInitialized();
+    }
+
+    private void HandleValidationRequested(object? sender, ValidationRequestedEventArgs args)
+    {
+        ValidationMessageStore?.Clear();
+    }
+    
+    public void AddErrorMessage(FieldIdentifier fieldIdentifier, string message)
+    {
+        ValidationMessageStore?.Add(fieldIdentifier, message);
+        EditContext?.NotifyValidationStateChanged();
+    }
+
+    public void Dispose()
+    {
+        if (EditContext is not null)
+        {
+            EditContext.OnValidationRequested -= HandleValidationRequested;
+        }
+    }
+}
